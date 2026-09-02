@@ -1,0 +1,33 @@
+name: Build downloadable desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: WarmCompanion-Windows
+          - os: macos-latest
+            artifact: WarmCompanion-macOS
+          - os: ubuntu-latest
+            artifact: WarmCompanion-Linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-build.txt
+      - run: python -m unittest -v
+      - run: pyinstaller --clean --noconfirm warm-companion.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error

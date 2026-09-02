@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+chat.db*
+build/
+dist/
+*.spec.bak
