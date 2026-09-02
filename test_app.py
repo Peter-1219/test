@@ -20,6 +20,11 @@ class MemoryTests(unittest.TestCase):
         app.save("a", "assistant", "第二句")
         self.assertEqual([m["content"] for m in app.history("a")], ["第一句", "第二句"])
 
+    def test_string_db_path_is_supported(self):
+        app.DB_PATH = str(app.Path(self.tmp_dir.name) / "memory-string.db")
+        app.save("a", "user", "第一句")
+        self.assertEqual([m["content"] for m in app.history("a")], ["第一句"])
+
     def test_missing_key_returns_setup_message(self):
         old = os.environ.pop("OPENAI_API_KEY", None)
         try:
