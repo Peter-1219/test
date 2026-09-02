@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>暖心同行者</title>
+  <style>
+    :root{--ink:#342f3e;--muted:#7b7284;--accent:#d97768;--paper:#fffaf6}*{box-sizing:border-box}body{margin:0;font-family:ui-rounded,"Noto Sans TC",system-ui;background:radial-gradient(circle at 15% 10%,#ffe5dc,transparent 35%),radial-gradient(circle at 90% 80%,#e6dcff,transparent 35%),#f8f2ed;color:var(--ink);min-height:100vh}.shell{max-width:820px;margin:auto;padding:24px 18px}.top{display:flex;align-items:center;gap:14px;margin-bottom:18px}.avatar{width:52px;height:52px;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:25px;box-shadow:0 8px 30px #6d4b4322}.top h1{font-size:22px;margin:0}.top p,.muted{color:var(--muted);margin:4px 0 0;font-size:14px}.card{height:calc(100vh - 120px);min-height:520px;background:#ffffffd9;border:1px solid #fff;border-radius:28px;box-shadow:0 20px 60px #6d4b4317;display:flex;flex-direction:column;overflow:hidden}.messages{flex:1;overflow:auto;padding:28px;display:flex;flex-direction:column;gap:16px}.bubble{max-width:78%;padding:13px 16px;border-radius:19px;line-height:1.65;white-space:pre-wrap}.assistant{background:var(--paper);border-bottom-left-radius:5px}.user{background:#463d50;color:#fff;align-self:flex-end;border-bottom-right-radius:5px}.suggestions{display:flex;flex-wrap:wrap;gap:8px;padding:0 28px 12px}.suggestions button,.choice{border:1px solid #e5c6bc;background:#fff;color:#8b5148;border-radius:99px;padding:9px 13px;cursor:pointer}.composer{padding:14px 17px;display:flex;gap:10px;border-top:1px solid #eee5df}textarea{font:inherit;resize:none;flex:1;border:0;background:#f6f1ee;border-radius:16px;padding:13px 15px;outline:none}.send{border:0;border-radius:16px;padding:0 22px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}.send:disabled{opacity:.5}.hint{text-align:center;font-size:12px;color:var(--muted);padding-bottom:8px}.overlay{position:fixed;inset:0;background:#302b35aa;display:grid;place-items:center;padding:18px;z-index:5}.survey{width:min(620px,100%);background:#fffaf7;border-radius:28px;padding:28px;box-shadow:0 30px 80px #0003}.progress{height:6px;background:#eee5df;border-radius:9px;margin:18px 0 28px;overflow:hidden}.progress span{display:block;height:100%;background:var(--accent);transition:.3s}.survey h2{margin:0}.survey h3{font-size:21px}.choices{display:grid;gap:10px}.choice{text-align:left;border-radius:14px;font:inherit;padding:14px}.choice:hover{background:#fff0ea}.profile{background:#f8f0ff;border-radius:16px;padding:14px;line-height:1.6;font-size:14px}.hidden{display:none}@media(max-width:600px){.shell{padding:12px 8px}.card{height:calc(100vh - 88px)}.messages{padding:18px}.bubble{max-width:90%}.suggestions{padding-inline:18px}.survey{padding:22px}}
+  </style>
+</head>
+<body>
+  <div class="overlay hidden" id="overlay"><section class="survey">
+    <h2>先讓我認識你 🌱</h2><p class="muted">沒有標準答案；這只用來調整陪伴你的方式，你之後也可以重新測驗。</p>
+    <div class="progress"><span id="progress"></span></div><div id="question"></div>
+  </section></div>
+  <main class="shell"><header class="top"><div class="avatar">🌿</div><div><h1>暖心同行者</h1><p>記得我們聊過的，也在意你此刻的感受</p></div></header>
+    <section class="card"><div class="messages" id="messages"><div class="bubble assistant">嗨，我在這裡。今天的你，最想先從哪一件事說起？</div></div>
+      <div class="suggestions" id="suggestions"></div>
+      <form class="composer" id="form"><textarea id="input" rows="1" maxlength="4000" placeholder="慢慢說，我在聽……"></textarea><button class="send">送出</button></form>
+      <div class="hint">對話保存在服務端；性格輪廓只用於調整溝通方式</div>
+    </section>
+  </main>
+<script>
+const questions=[
+ {key:'energy',title:'累了一整天後，你通常如何恢復能量？',options:['獨處充電','與人相處','看情況']},
+ {key:'decision',title:'面對重要決定，你最常先考慮什麼？',options:['先看感受','先看邏輯','兩者平衡']},
+ {key:'stress',title:'壓力很大時，你直覺會怎麼做？',options:['自己消化','找人聊聊','立刻行動']},
+ {key:'comfort',title:'難過時，哪種陪伴最適合你？',options:['先聽我說','給我建議','陪伴加建議']},
+ {key:'conflict',title:'關係出現摩擦時，你通常會？',options:['避免衝突','直接溝通','冷靜後再談']},
+ {key:'structure',title:'生活安排上，你比較喜歡？',options:['喜歡規劃','隨性彈性','大方向即可']},
+ {key:'sensitivity',title:'你多容易察覺別人的語氣或情緒變化？',options:['很容易察覺','通常會察覺','不太受影響']},
+ {key:'expression',title:'說出自己真正的感受，對你來說？',options:['直接說出來','確認安全才說','很難說出口']}
+];
+const box=document.querySelector('#messages'),input=document.querySelector('#input'),form=document.querySelector('#form'),send=form.querySelector('button'),suggestions=document.querySelector('#suggestions'),overlay=document.querySelector('#overlay'),question=document.querySelector('#question'),progress=document.querySelector('#progress');
+let id=localStorage.getItem('warm-conversation-id'),step=0,answers={};
+function add(text,role){const el=document.createElement('div');el.className='bubble '+role;el.textContent=text;box.append(el);box.scrollTop=box.scrollHeight}
+function showSuggestions(items=[]){suggestions.innerHTML='';items.forEach(text=>{const b=document.createElement('button');b.textContent=text;b.onclick=()=>{input.value=text;form.requestSubmit()};suggestions.append(b)})}
+function renderQuestion(){const q=questions[step];progress.style.width=`${step/questions.length*100}%`;question.innerHTML=`<div class="muted">第 ${step+1} / ${questions.length} 題</div><h3>${q.title}</h3><div class="choices">${q.options.map(o=>`<button class="choice" data-value="${o}">${o}</button>`).join('')}</div>`;question.querySelectorAll('button').forEach(b=>b.onclick=()=>{answers[q.key]=b.dataset.value;if(++step<questions.length)renderQuestion();else finishSurvey()})}
+async function finishSurvey(){progress.style.width='100%';question.innerHTML='<h3>正在整理適合你的溝通方式…</h3>';try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:id,answers})});const data=await r.json();if(!r.ok)throw Error(data.error);id=data.conversation_id;localStorage.setItem('warm-conversation-id',id);question.innerHTML=`<h3>你的初步溝通輪廓</h3><div class="profile">${data.analysis}</div><p class="muted">這不是心理診斷；我會保持彈性，並以你當下說的話為準。</p><button class="send" style="padding:12px 20px" id="start">開始聊天</button>`;document.querySelector('#start').onclick=()=>overlay.classList.add('hidden')}catch(e){question.innerHTML=`<p>${e.message}</p><button class="choice" onclick="location.reload()">重新嘗試</button>`}}
+async function restore(){if(!id){overlay.classList.remove('hidden');renderQuestion();return}const r=await fetch('/api/history/'+encodeURIComponent(id));if(r.ok){const data=await r.json();if(data.messages.length){box.innerHTML='';data.messages.forEach(m=>add(m.content,m.role))}}}
+form.addEventListener('submit',async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;add(message,'user');showSuggestions();input.value='';send.disabled=true;try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:id,message})});const data=await r.json();if(!r.ok)throw Error(data.error);id=data.conversation_id;localStorage.setItem('warm-conversation-id',id);add(data.reply,'assistant');showSuggestions(data.suggestions)}catch(e){add('抱歉，剛剛連線出了點狀況：'+e.message,'assistant')}finally{send.disabled=false;input.focus()}});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});restore();
+</script></body></html>
