@@ -8,11 +8,11 @@ import app
 
 class MemoryTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.NamedTemporaryFile(suffix=".db")
-        app.DB_PATH = app.Path(self.tmp.name)
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        app.DB_PATH = app.Path(self.tmp_dir.name) / "memory.db"
 
     def tearDown(self):
-        self.tmp.close()
+        self.tmp_dir.cleanup()
 
     def test_history_is_scoped_and_ordered(self):
         app.save("a", "user", "第一句")
