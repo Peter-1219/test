@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 import app
 
@@ -41,6 +42,12 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(profile["analysis"], analysis)
         self.assertIn("情緒感受度", analysis)
         self.assertIn("非心理診斷", analysis)
+
+    def test_default_data_directory_is_platform_specific(self):
+        with mock.patch("app.platform.system", return_value="Windows"), mock.patch.dict(os.environ, {"APPDATA": "/user/appdata"}):
+            self.assertEqual(app.default_data_dir(), app.Path("/user/appdata/WarmCompanion"))
+        with mock.patch("app.platform.system", return_value="Linux"), mock.patch.dict(os.environ, {"XDG_DATA_HOME": "/user/data"}):
+            self.assertEqual(app.default_data_dir(), app.Path("/user/data/WarmCompanion"))
 
 
 if __name__ == "__main__": unittest.main()

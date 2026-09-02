@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import sqlite3
 import urllib.error
 import urllib.request
@@ -11,8 +12,22 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from uuid import uuid4
 
-ROOT = Path(__file__).parent
-DB_PATH = Path(os.getenv("CHAT_DB_PATH", ROOT / "chat.db"))
+ROOT = Path(__file__).resolve().parent
+
+
+def default_data_dir():
+    """Return a writable per-user directory, including in a bundled app."""
+    system = platform.system()
+    if system == "Windows":
+        base = Path(os.getenv("APPDATA", Path.home()))
+    elif system == "Darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / "WarmCompanion"
+
+
+DB_PATH = Path(os.getenv("CHAT_DB_PATH", default_data_dir() / "chat.db"))
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 
 SYSTEM_PROMPT = """你是「暖心同行者」，一位高情商的繁體中文對話夥伴。
@@ -36,6 +51,7 @@ PROFILE_TRAITS = {
 
 
 def connect():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
@@ -139,8 +155,12 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
 
 
-if __name__ == "__main__":
+def run(host="0.0.0.0", port=None):
     connect().close()
-    port = int(os.getenv("PORT", "8000"))
+    port = int(port if port is not None else os.getenv("PORT", "8000"))
     print(f"暖心同行者：http://localhost:{port}")
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    ThreadingHTTPServer((host, port), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    run()
